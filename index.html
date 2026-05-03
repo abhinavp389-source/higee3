@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiGee RPB Deaerator — Design Calculator</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* ── MINIMALISTIC THEME ───────────────────────────── */
+  --bg:      #f7f8fa;
+  --surface: #ffffff;
+  --surf2:   #f1f3f5;
+  --border:  #e2e6ea;
+
+  --accent:  #2f6fed;
+  --accent2: #6c757d;
+  --accent3: #2fbf71;
+
+  --text:    #1f2937;
+  --muted:   #6b7280;
+
+  --danger:  #e63946;
+  --warn:    #f4a261;
+
+  --mono: 'Space Mono', monospace;
+  --sans: 'Barlow Condensed', sans-serif;
+}
+
+/* ── BASE ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  header {
+    padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+    display: flex; align-items: flex-end; gap: 24px;
+  }
+  .logo-mark {
+    width: 56px; height: 56px;
+    border: 2px solid var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; position: relative;
+    animation: spin 20s linear infinite;
+  }
+  .logo-mark::after {
+    content: '';
+    position: absolute; width: 8px; height: 8px;
+    background: var(--accent); border-radius: 50%;
+    top: -5px; left: 50%; transform: translateX(-50%);
+  }
+  .logo-inner {
+    width: 30px; height: 30px;
+    border: 1px solid var(--accent); border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 10s linear infinite reverse;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .header-text h1 {
+    font-family: var(--sans); font-weight: 900;
+    font-size: clamp(26px, 4vw, 44px);
+    letter-spacing: .04em; text-transform: uppercase; line-height: 1;
+  }
+  .header-text h1 .c1 { color: var(--accent); }
+  .header-text h1 .c2 { color: var(--accent2); }
+  .header-text p {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    margin-top: 6px; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .tag {
+    display: inline-block; font-family: var(--mono); font-size: 10px;
+    padding: 2px 8px; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 2px; letter-spacing: .1em; text-transform: uppercase;
+    margin-left: 12px; vertical-align: middle;
+  }
+
+  /* ── FLOWCHART STEPS ─────────────────────────────────────── */
+  .flow-steps {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 36px; overflow-x: auto; padding-bottom: 4px;
+  }
+  .flow-step {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; flex-shrink: 0;
+  }
+  .flow-step .num {
+    width: 28px; height: 28px;
+    border: 1px solid var(--border); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    transition: all .3s;
+  }
+  .flow-step.active .num { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,.08); }
+  .flow-step.done   .num { border-color: var(--accent3); color: var(--accent3); background: rgba(124,252,0,.06); }
+  .flow-step .lbl {
+    font-family: var(--mono); font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; text-align: center;
+    max-width: 80px; line-height: 1.3;
+  }
+  .flow-arrow {
+    font-size: 14px; color: var(--border); padding: 0 6px;
+    padding-bottom: 18px; flex-shrink: 0;
+  }
+
+  /* ── SECTION LABEL ───────────────────────────────────────── */
+  .section-label {
+    font-family: var(--mono); font-size: 10px; color: var(--accent);
+    letter-spacing: .2em; text-transform: uppercase;
+    margin-bottom: 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::before { content: '▶'; font-size: 8px; }
+
+  /* ── CARDS ───────────────────────────────────────────────── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 24px; margin-bottom: 24px;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .card.step2-card::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── FORM ────────────────────────────────────────────────── */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-family: var(--mono); font-size: 11px;
+    font-weight: 800;
+
+    color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+    margin-bottom: 6px;
+  }
+  .field label .unit  { color: var(--accent2); font-size: 10px; margin-left: 6px; }
+  .field label .hint  { color: var(--accent);  font-size: 10px; margin-left: 6px; }
+
+  .field input, .field select {
+    width: 100%; background: var(--surf2);
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 10px 14px; color: var(--text);
+    font-family: var(--mono); font-size: 13px; outline: none;
+     font-weight: 100;      /* ⬅️ BOLD */
+     letter-spacing: 0.5px;
+    transition: border-color .2s, box-shadow .2s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,229,255,.1);
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a99'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 32px; cursor: pointer;
+  }
+
+  .gl-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10px;
+    padding: 3px 10px; border-radius: 2px;
+    margin-top: 6px; border: 1px solid currentColor;
+  }
+  .gl-badge.ok   { color: var(--accent3); }
+  .gl-badge.low  { color: var(--warn); }
+  .gl-badge.high { color: var(--danger); }
+
+  /* ── FORMULA DISPLAY ─────────────────────────────────────── */
+  .formula-box {
+    background: var(--surf2); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    border-radius: 3px; padding: 12px 16px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    line-height: 2; margin-top: 12px;
+  }
+  .formula-box .eq { color: var(--text); }
+  .formula-box .note { color: var(--accent); font-size: 10px; margin-left: 8px; }
+
+  /* ── BUTTON ──────────────────────────────────────────────── */
+  .btn-calc {
+    width: 100%; padding: 16px;
+    background: transparent; border: 2px solid var(--accent);
+    color: var(--accent); font-family: var(--sans); font-weight: 700;
+    font-size: 18px; letter-spacing: .2em; text-transform: uppercase;
+    border-radius: 3px; cursor: pointer; transition: all .2s;
+    position: relative; overflow: hidden;
+  }
+  .btn-calc::before {
+    content: ''; position: absolute; inset: 0;
+    background: var(--accent); transform: translateX(-100%);
+    transition: transform .3s; z-index: 0;
+  }
+  .btn-calc:hover::before { transform: translateX(0); }
+  .btn-calc:hover { color: var(--bg); }
+  .btn-calc span  { position: relative; z-index: 1; }
+  .btn-calc:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-calc:disabled::before { transform: translateX(-100%) !important; }
+  .btn-calc:disabled { color: var(--accent) !important; }
+
+  .spinner {
+    display: none; width: 18px; height: 18px;
+    border: 2px solid rgba(0,229,255,.2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto;
+  }
+  .spinner.active { display: inline-block; }
+
+  /* ── OUTPUT PANEL ────────────────────────────────────────── */
+  #output-panel { display: none; animation: fadeUp .4s ease; }
+  #output-panel.visible { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Hero metrics */
+  .hero-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .hero-card {
+    background: var(--surf2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 20px 16px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .hero-card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .hm-label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .15em; margin-bottom: 8px; }
+  .hm-value { font-family: var(--sans); font-weight: 700; font-size: 22px; color: var(--accent); line-height: 1; word-break: break-all; }
+  .hm-unit  { font-family: var(--mono); font-size: 10px; color: var(--accent2); margin-top: 4px; }
+
+  /* Convergence */
+  .conv-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .conv-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10px;
+    padding: 4px 12px; border-radius: 2px; border: 1px solid;
+  }
+  .conv-badge.ok  { color: var(--accent3); border-color: var(--accent3); background: rgba(124,252,0,.06); }
+  .conv-badge.bad { color: var(--danger);  border-color: var(--danger);  background: rgba(255,71,87,.06); }
+  .conv-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .conv-meta span { color: var(--text); }
+
+  /* Alerts */
+  .alert {
+    padding: 10px 16px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11px;
+    margin-bottom: 10px; border-left: 3px solid;
+  }
+  .alert-ok   { background: rgba(124,252,0,.08); border-color: var(--accent3); color: var(--accent3); }
+  .alert-warn { background: rgba(255,165,2,.08); border-color: var(--warn);    color: var(--warn); }
+  .alert-err  { background: rgba(255,71,87,.08); border-color: var(--danger);  color: var(--danger); }
+
+  /* Output groups */
+  .out-group {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 20px; margin-bottom: 20px;
+    position: relative; overflow: hidden;
+  }
+  .out-group::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; width: 3px; height: 100%;
+    background: var(--accent);
+  }
+  .out-group.orange::before { background: var(--accent2); }
+  .out-group.green::before  { background: var(--accent3); }
+
+  .out-group h4 {
+    font-family: var(--mono); font-size: 10px; color: var(--accent);
+    letter-spacing: .2em; text-transform: uppercase;
+    margin-bottom: 14px; padding-left: 12px;
+  }
+  .out-group.orange h4 { color: var(--accent2); }
+  .out-group.green  h4 { color: var(--accent3); }
+
+  .out-row {
+    display: flex; justify-content: space-between;
+    align-items: baseline; gap: 12px;
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .out-row:last-child  { border-bottom: none; }
+  .out-row.hi { background: rgba(0,229,255,.05); }
+  .out-row.hi .out-label { color: var(--text); font-weight: 700; }
+  .out-row.hi .out-val   { color: var(--accent); }
+
+  .out-label { font-family: var(--mono); font-size: 11px; color: var(--muted); flex: 1; }
+  .out-val   { font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 700; text-align: right; flex-shrink: 0; word-break: break-all; }
+  .out-val .u { font-size: 10px; color: var(--accent2); font-weight: 400; margin-left: 3px; }
+
+  /* Footer */
+  .footer-note {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    line-height: 1.8; padding: 12px 16px;
+    border: 1px solid var(--border); border-radius: 3px; margin-top: 8px;
+  }
+
+  /* Error box */
+  #error-box {
+    display: none; padding: 14px 18px;
+    background: rgba(255,71,87,.08); border: 1px solid var(--danger);
+    border-radius: 4px; font-family: var(--mono); font-size: 12px;
+    color: var(--danger); margin-bottom: 20px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-mark"><div class="logo-inner"></div></div>
+    <div class="header-text">
+      <h1>Hi<span class="c1">Gee</span> RPB <span class="c2">Designer</span></h1>
+      <p>Rotating Packed Bed Deaerator — Preliminary Design Calculator <span class="tag"></span></p>
+    </div>
+  </header>
+
+  <!-- FLOWCHART STEP INDICATOR -->
+  <div class="flow-steps">
+    <div class="flow-step active" id="fs1">
+      <div class="num">1</div>
+      <div class="lbl">Physical Props</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fs2">
+      <div class="num">2</div>
+      <div class="lbl">Calc rᵢ</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fs3">
+      <div class="num">3</div>
+      <div class="lbl">Calc Ug flooding</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fs4">
+      <div class="num">4</div>
+      <div class="lbl">Calc h (70% flood)</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fs5">
+      <div class="num">5</div>
+      <div class="lbl">Assume ro → kG,kL</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fs6">
+      <div class="num">6</div>
+      <div class="lbl">ATU × NTU → ro_cal</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fs7">
+      <div class="num">✔</div>
+      <div class="lbl">Converged → Output</div>
+    </div>
+  </div>
+
+  <!-- ── STEP 1: PROCESS INPUTS & PHYSICAL PROPERTIES ─── -->
+  <div class="section-label">Step 1 — Process Inputs &amp; Physical Properties</div>
+  <div class="card">
+    <div class="grid-2">
+      <div>
+        <div class="field">
+          <label>Water Capacity <span class="unit">TPD</span></label>
+          <input type="number" id="water_capacity" value="50" min="1" step="1">
+        </div>
+        <div class="field">
+          <label>G / L Ratio <span class="hint">(0.8–1.6 recommended)</span></label>
+          <input type="number" id="gl_ratio" value="1" min="0.5" max="2.5" step="0.05" oninput="updateGL()">
+          <div id="gl_badge" class="gl-badge ok">● Optimal range</div>
+        </div>
+        <div class="field">
+          <label>Temperature <span class="unit">°C</span></label>
+          <input type="number" id="temperature" value="85" min="0" max="100" step="0.5">
+        </div>
+        <div class="field">
+          <label>Inlet O₂ concentration <span class="unit">ppb</span></label>
+          <input type="number" id="inlet_do" value="7000" min="100" step="100">
+        </div>
+        <div class="field">
+          <label>Target O₂ concentration <span class="unit">ppb</span></label>
+          <input type="number" id="target_do" value="5" min="1" step="1">
+        </div>
+      </div>
+      <div>
+        <div class="field">
+          <label>Rotor Speed <span class="unit">RPM</span></label>
+          <input type="number" id="rpm" value="500" min="100" max="3000" step="50">
+        </div>
+        <div class="field">
+          <label>Operating Pressure <span class="unit">kg/cm² g</span></label>
+          <input type="number" id="op_pressure" value="0" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Packing Type</label>
+          <select id="packing_type" onchange="packingPreset()">
+            <option value="wire_mesh">Wire Mesh (ap=1500, ε=0.92)</option>
+            <option value="metal_foam">Metal Foam (ap=1600, ε=0.95)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Packing Specific Area aₚ <span class="unit">m²/m³</span></label>
+          <input type="number" id="pack_area" value="1500" min="100" step="50">
+        </div>
+        <div class="field">
+          <label>rpack <span class="unit">m</span></label>
+          <input type="number" id="rpack" value="0.968712779" min="0.01" step="0.001">
+        </div>
+        <div class="field">
+          <label>Void Fraction ε</label>
+          <input type="number" id="void_fraction" value="0.92" min="0.5" max="0.99" step="0.01">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2 + 3 + 4: ri, Ug, h SUMMARY (shown as formulas) ── -->
+  <div class="section-label">Steps 2–4 — rᵢ, Ug, h Formulas (computed automatically)</div>
+  <div class="card step2-card">
+    <div class="grid-2">
+      <div>
+        <div class="formula-box">
+          <div style="color:var(--accent2);font-size:10px;letter-spacing:.1em;margin-bottom:8px;">STEP 2 — Inner Radius (Agarwal et al. [27])</div>
+          <span class="eq">rᵢ = √[G / (π u_jet(1−fd))] × (4ρG/ρL)^0.25</span><br>
+          <span class="note">u_jet = 3 m/s &nbsp;|&nbsp; fd = 0.3</span>
+        </div>
+        <div class="formula-box" style="margin-top:12px;">
+          <div style="color:var(--accent2);font-size:10px;letter-spacing:.1em;margin-bottom:8px;">STEP 4 — Axial Width h (70% flooding)</div>
+          <span class="eq">h = G / (2π rᵢ Ug_op)</span><br>
+          <span class="note">Ug_op = 0.7 × Ug_flood</span>
+        </div>
+      </div>
+      <div>
+        <div class="formula-box" style="border-left-color:var(--accent);">
+          <div style="color:var(--accent);font-size:10px;letter-spacing:.1em;margin-bottom:8px;">STEP 3 — Ug at flooding (Ug = UL assumption)</div>
+          <span class="eq">Ug = [β Ng^a aₚ^b μ^c (ρL−ρG)^0.25 /</span><br>
+          <span class="eq">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (ρG^0.25 λ(L/αG)^0.5 ρL^0.5)]²</span><br>
+          <span class="note">β=130, a=0.43, b=−0.93, c=−0.003, λ=1.51, α=0.7</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 5+6: ITERATIVE SOLVER ── -->
+  <div class="section-label">Steps 5–6 — Iterative Solver Settings (ro assumption)</div>
+  <div class="card">
+    <div class="grid-2">
+      <div>
+        <div class="field">
+          <label>Initial r₀ assumption <span class="unit">m</span></label>
+          <input type="number" id="ro_guess" value="1.013039699" min="0.05" step="0.05">
+        </div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;line-height:1.9;">
+          Bisection solver iterates ro until:<br>
+          <span style="color:var(--accent)">π(ro_cal² − rᵢ²) = ATU × NTU</span><br>
+          <span style="color:var(--accent)">ro_cal ≈ ro_assume &nbsp; (tol = 1e-6 m)</span>
+        </div>
+      </div>
+      <div>
+        <div class="formula-box" style="border-left-color:var(--accent3);margin-top:0;">
+          <div style="color:var(--accent3);font-size:10px;letter-spacing:.1em;margin-bottom:8px;">CONVERGENCE EQUATIONS</div>
+          <span class="eq">kLa = 0.0733 ScL^0.5 ReL^0.3547 GrL^0.2934 (aₚDL/dp)^0.8879</span><br>
+          <span class="eq">kGa = 0.00738 ScG^0.5 ReG^0.976 GrG^0.132 (aₚDG/dp)^0.8879</span><br>
+          <span class="eq">1/KG = 1/kG + He/kL</span><br>
+          <span class="eq">ATU = G / (h KGa) &nbsp;|&nbsp; NTU = ln(Cin/Cout)</span><br>
+          <span class="eq">ro_cal = √[(ATU×NTU/π) + rᵢ²]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CALCULATE ── -->
+  <div style="margin-bottom:40px;">
+    <button class="btn-calc" id="calc-btn" onclick="runCalc()">
+      <span id="btn-label">⟳ &nbsp; Run Design Calculation</span>
+      <span class="spinner" id="spinner"></span>
+    </button>
+  </div>
+
+  <div id="error-box"></div>
+
+  <!-- ── OUTPUTS ── -->
+  <div id="output-panel">
+
+    <div class="section-label">Design Results — Converged Solution</div>
+
+    <!-- Hero metrics -->
+    <div class="hero-grid">
+      <div class="hero-card"><div class="hm-label">Inner Radius rᵢ</div><div class="hm-value" id="h_ri">—</div><div class="hm-unit">m</div></div>
+      <div class="hero-card"><div class="hm-label">Outer Radius r₀</div><div class="hm-value" id="h_ro">—</div><div class="hm-unit">m</div></div>
+      <div class="hero-card"><div class="hm-label">Axial Width h</div><div class="hm-value" id="h_h">—</div><div class="hm-unit">m</div></div>
+      <div class="hero-card"><div class="hm-label">Radial Bed Δr</div><div class="hm-value" id="h_dr">—</div><div class="hm-unit">m</div></div>
+      <div class="hero-card"><div class="hm-label">Est. Power</div><div class="hm-value" id="h_pwr">—</div><div class="hm-unit">kW</div></div>
+      <div class="hero-card"><div class="hm-label">Total Cost</div><div class="hm-value" id="h_cost">—</div><div class="hm-unit">US$ ×10³</div></div>
+    </div>
+
+    <!-- Convergence status -->
+    <div class="conv-wrap">
+      <div id="conv_badge" class="conv-badge ok">✔ Converged</div>
+      <div class="conv-meta">
+        |ro_assume − ro_cal| = <span id="conv_err">—</span> m &nbsp;|&nbsp;
+        Iterations = <span id="conv_it">—</span>
+      </div>
+    </div>
+
+    <div id="alerts"></div>
+
+    <div class="grid-2">
+
+      <!-- LEFT COLUMN -->
+      <div>
+
+        <div class="out-group">
+          <h4>▸ Step 1 — Basis &amp; Physical Properties</h4>
+          <div class="out-row"><div class="out-label">Water Flow L</div><div class="out-val" id="r_L">—<span class="u">m³/s</span></div></div>
+          <div class="out-row"><div class="out-label">N₂ Flow G (NTP)</div><div class="out-val" id="r_G">—<span class="u">m³/s</span></div></div>
+          <div class="out-row"><div class="out-label">N₂ Consumption</div><div class="out-val" id="r_N2">—<span class="u">Nm³/h</span></div></div>
+          <div class="out-row"><div class="out-label">Pressure (abs)</div><div class="out-val" id="r_P">—<span class="u">bar</span></div></div>
+          <div class="out-row"><div class="out-label">Liquid density ρL</div><div class="out-val">1000<span class="u">kg/m³</span></div></div>
+          <div class="out-row"><div class="out-label">Gas density ρG</div><div class="out-val" id="r_rhoG">—<span class="u">kg/m³</span></div></div>
+          <div class="out-row"><div class="out-label">Liquid viscosity μL</div><div class="out-val" id="r_muL">—<span class="u">Pa·s</span></div></div>
+          <div class="out-row"><div class="out-label">Gas viscosity μG</div><div class="out-val" id="r_muG">—<span class="u">×10⁻⁵ Pa·s</span></div></div>
+          <div class="out-row"><div class="out-label">DL (O₂ in liquid)</div><div class="out-val" id="r_DL">—<span class="u">×10⁻⁹ m²/s</span></div></div>
+          <div class="out-row"><div class="out-label">DG (O₂ in gas)</div><div class="out-val" id="r_DG">—<span class="u">×10⁻⁶ m²/s</span></div></div>
+        </div>
+
+        <div class="out-group orange">
+          <h4>▸ Step 2 — Inner Radius &amp; Distributor</h4>
+          <div class="out-row"><div class="out-label">Packing eff. diam. dp</div><div class="out-val" id="r_dp">—<span class="u">m</span></div></div>
+          <div class="out-row"><div class="out-label">Angular velocity ω</div><div class="out-val" id="r_omega">—<span class="u">rad/s</span></div></div>
+          <div class="out-row"><div class="out-label">Centrifugal Accln Ac</div><div class="out-val" id="r_Ac">—<span class="u">m/s²</span></div></div>
+          <div class="out-row"><div class="out-label">Actual velocity</div><div class="out-val" id="r_V_actual">—<span class="u">m/s</span></div></div>
+          <div class="out-row"><div class="out-label">Centrifugal No. Ng</div><div class="out-val" id="r_Ng">—</div></div>
+          <div class="out-row hi"><div class="out-label">Inner radius rᵢ</div><div class="out-val" id="r_ri">—<span class="u">m</span></div></div>
+          <div class="out-row hi"><div class="out-label"> Guessed outer radius ro</div><div class="out-val" id="r_ro_guess">—<span class="u">m</span></div></div>
+          <div class="out-row hi"><div class="out-label"> Error </div><div class="out-val" id="r_error">—<span class="u">m</span></div></div>
+          <div class="out-row"><div class="out-label">Pipe diameter D</div><div class="out-val" id="r_D">—<span class="u">m</span></div></div>
+          <div class="out-row"><div class="out-label">Pipe Reynolds No.</div><div class="out-val" id="r_Re">—</div></div>
+          <div class="out-row"><div class="out-label">Friction factor f</div><div class="out-val" id="r_f">—</div></div>
+          <div class="out-row"><div class="out-label">Orifice area</div><div class="out-val" id="r_A_ori">—<span class="u">m²</span></div></div>
+          <div class="out-row"><div class="out-label">No. of holes n</div><div class="out-val" id="r_n">—</div></div>
+          <div class="out-row"><div class="out-label">Designed ri</div><div class="out-val" id="r_Dri">—<span class="u">m</span></div></div>
+          <div class="out-row"><div class="out-label">conv</div><div class="out-val" id="r_conv">—<span class="u">m</span></div></div>
+        </div>
+
+        <div class="out-group orange">
+          <h4>▸ Step 3 — Flooding Velocity</h4>
+          <div class="out-row"><div class="out-label">Ug at flooding</div><div class="out-val" id="r_Ugf">—<span class="u">m/s</span></div></div>
+          <div class="out-row hi"><div class="out-label">Ug operating (70%)</div><div class="out-val" id="r_Ugo">—<span class="u">m/s</span></div></div>
+        </div>
+
+        <div class="out-group orange">
+          <h4>▸ Step 4 — Axial Width h</h4>
+          <div class="out-row hi"><div class="out-label">RPB axial width h</div><div class="out-val" id="r_h">—<span class="u">m</span></div></div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div>
+
+        <div class="out-group green">
+          <h4>▸ Steps 5–6 — Dimensionless Numbers</h4>
+          <div class="out-row"><div class="out-label">ReL (Liquid Reynolds)</div><div class="out-val" id="r_ReL">—</div></div>
+          <div class="out-row"><div class="out-label">ReG (Gas Reynolds)</div><div class="out-val" id="r_ReG">—</div></div>
+          <div class="out-row"><div class="out-label">GrL (Liquid Grashof)</div><div class="out-val" id="r_GrL">—</div></div>
+          <div class="out-row"><div class="out-label">GrG (Gas Grashof)</div><div class="out-val" id="r_GrG">—</div></div>
+          <div class="out-row"><div class="out-label">ScL (Liquid Schmidt)</div><div class="out-val" id="r_ScL">—</div></div>
+          <div class="out-row"><div class="out-label">ScG (Gas Schmidt)</div><div class="out-val" id="r_ScG">—</div></div>
+        </div>
+
+        <div class="out-group green">
+          <h4>▸ Step 5–6 — Mass Transfer (Rajan et al.)</h4>
+          <div class="out-row"><div class="out-label">Henry's constant He</div><div class="out-val" id="r_He">—</div></div>
+          <div class="out-row"><div class="out-label">kLa (liquid-side)</div><div class="out-val" id="r_kLa">—<span class="u">1/s</span></div></div>
+          <div class="out-row"><div class="out-label">kGa (gas-side)</div><div class="out-val" id="r_kGa">—<span class="u">1/s</span></div></div>
+          <div class="out-row hi"><div class="out-label">Overall KGa</div><div class="out-val" id="r_KGa">—<span class="u">1/s</span></div></div>
+          <div class="out-row"><div class="out-label">NTU = ln(Cin/Cout)</div><div class="out-val" id="r_NTU">—</div></div>
+          <div class="out-row"><div class="out-label">ATU</div><div class="out-val" id="r_ATU">—<span class="u">m</span></div></div>
+          <div class="out-row"><div class="out-label">Effective RTD</div><div class="out-val" id="r_RTD">—<span class="u">s</span></div></div>
+        </div>
+
+        <div class="out-group">
+          <h4>▸ Pressure Drop</h4>
+          <div class="out-row"><div class="out-label">K(Head loss)</div><div class="out-val" id="r_K_hl">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Discharge ΔPd</div><div class="out-val" id="r_dPd">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Drag coefficient</div><div class="out-val" id="r_CD">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Total ΔP₀</div><div class="out-val" id="r_dPt">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Gas flow area</div><div class="out-val" id="r_gas_fa">—<span class="u">m^2</span></div></div>
+          <div class="out-row"><div class="out-label">Momentum pressure drop</div><div class="out-val" id="r_dPm">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Frictional Pressure Drop</div><div class="out-val" id="r_dPf">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Centrifugal ΔPc</div><div class="out-val" id="r_dPc">—<span class="u">Pa</span></div></div>
+          <div class="out-row"><div class="out-label">Packing ΔP total</div><div class="out-val" id="r_dPp">—<span class="u">Pa</span></div></div>
+        </div>
+
+        <div class="out-group">
+          <h4>▸ Performance &amp; Sizing</h4>
+          <div class="out-row"><div class="out-label">Estimated power</div><div class="out-val" id="r_pwr">—<span class="u">kW</span></div></div>
+          <div class="out-row"><div class="out-label">Maldistribution</div><div class="out-val" id="r_mald">—<span class="u">%</span></div></div>
+          <div class="out-row"><div class="out-label">Packed bed volume</div><div class="out-val" id="r_Vpb">—<span class="u">m³</span></div></div>
+          <div class="out-row"><div class="out-label">Stripping factor SR</div><div class="out-val" id="r_SR">—</div></div>
+        </div>
+
+        <div class="out-group">
+          <h4>▸ Costing (CEPCI 2024 = 800)</h4>
+          <div class="out-row"><div class="out-label">Cost of Rotor</div><div class="out-val">US$ <span id="r_Cr">—</span></div></div>
+          <div class="out-row"><div class="out-label">Cost of Packing</div><div class="out-val">US$ <span id="r_Cp">—</span></div></div>
+          <div class="out-row"><div class="out-label">Motor Cost</div><div class="out-val">US$ <span id="r_Cm">—</span></div></div>
+          <div class="out-row hi"><div class="out-label">Total Cost</div><div class="out-val">US$ <span id="r_Ct">—</span></div></div>
+        </div>
+
+      </div>
+    </div><!-- /grid-2 -->
+
+    <div class="footer-note">
+      ⚠ Preliminary design only. Correlations: Andrade (μL), Sutherland (μG), Wilke-Chang (DL), Chapman-Enskog (DG),
+      Rajan et al. (kLa / kGa), Agarwal et al. [27] (rᵢ, flooding), Gudena et al. 2011 (motor cost). CEPCI 800 (2024).
+      Always validate against detailed CFD/simulation and published literature.
+    </div>
+  </div><!-- /output-panel -->
+
+</div><!-- /wrapper -->
+
+<script>
+// ── Packing preset ────────────────────────────────────────────────────────────
+function packingPreset() {
+  const t = document.getElementById('packing_type').value;
+  if (t === 'wire_mesh')  { setVal('pack_area', 1500); setVal('void_fraction', 0.92); }
+  if (t === 'metal_foam') { setVal('pack_area', 1600); setVal('void_fraction', 0.95); }
+}
+function setVal(id, v) { document.getElementById(id).value = v; }
+
+// ── G/L badge ─────────────────────────────────────────────────────────────────
+function updateGL() {
+  const gl = parseFloat(document.getElementById('gl_ratio').value);
+  const el = document.getElementById('gl_badge');
+  if      (gl < 0.8) { el.className = 'gl-badge low';  el.textContent = '● Too low — poor mass transfer'; }
+  else if (gl > 1.6) { el.className = 'gl-badge high'; el.textContent = '● Too high — flooding risk'; }
+  else               { el.className = 'gl-badge ok';   el.textContent = '● Optimal range (0.8–1.6)'; }
+}
+
+// ── Flow step animator ────────────────────────────────────────────────────────
+function animateSteps(done) {
+  for (let i = 1; i <= 7; i++) {
+    const el = document.getElementById('fs' + i);
+    if (!el) continue;
+    if (done && i <= 7) { el.classList.add('done'); el.classList.remove('active'); }
+    else { el.classList.remove('done', 'active'); }
+  }
+}
+function highlightStep(n) {
+  for (let i = 1; i <= 7; i++) {
+    const el = document.getElementById('fs' + i);
+    if (!el) continue;
+    el.classList.remove('active', 'done');
+    if (i < n)  el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function inp(id) { return parseFloat(document.getElementById(id).value); }
+function setText(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+
+// fmt: fixed decimal places — use high dp for critical geometry values
+function fmt(v, d) { return isFinite(v) ? Number(v).toFixed(d ?? 9) : '—'; }
+
+// fmtSci: scientific notation with full precision
+function fmtSci(v) { return isFinite(v) ? Number(v).toExponential(9) : '—'; }
+
+// fmtFull: maximum JS precision (up to 15 sig figs), trims trailing zeros
+function fmtFull(v) {
+  if (!isFinite(v)) return '—';
+  // toPrecision(15) then remove trailing zeros after decimal
+  return parseFloat(Number(v).toPrecision(15)).toString();
+}
+
+// ── Main call ─────────────────────────────────────────────────────────────────
+async function runCalc() {
+  const btn     = document.getElementById('calc-btn');
+  const label   = document.getElementById('btn-label');
+  const spinner = document.getElementById('spinner');
+  const errBox  = document.getElementById('error-box');
+
+  btn.disabled         = true;
+  label.style.display  = 'none';
+  spinner.classList.add('active');
+  errBox.style.display = 'none';
+
+  // Animate through steps visually
+  for (let s = 1; s <= 6; s++) {
+    highlightStep(s);
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  const payload = {
+    water_capacity: inp('water_capacity'),
+    gl_ratio:       inp('gl_ratio'),
+    temperature:    inp('temperature'),
+    inlet_do:       inp('inlet_do'),
+    target_do:      inp('target_do'),
+    rpm:            inp('rpm'),
+    op_pressure:    inp('op_pressure'),
+    pack_area:      inp('pack_area'),
+    void_fraction:  inp('void_fraction'),
+    ro_guess:       inp('ro_guess'),
+    rpack:          inp('rpack'),
+  };
+
+  try {
+    const resp = await fetch('/calculate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const json = await resp.json();
+    if (!json.success) throw new Error(json.error + '\n' + (json.trace || ''));
+    animateSteps(true);
+    populateOutputs(json.data, payload);
+  } catch (err) {
+    errBox.textContent   = '⚠ ' + err.message;
+    errBox.style.display = 'block';
+    highlightStep(1);
+  } finally {
+    btn.disabled = false;
+    label.style.display = 'inline';
+    spinner.classList.remove('active');
+  }
+}
+
+function populateOutputs(d, inp_vals) {
+  // ── Hero cards — 9 decimal places for geometry ───────────────────────────
+  setText('h_ri',   fmt(d.ri,      9));
+  setText('h_ro',   fmt(d.ro,      9));
+  setText('h_h',    fmt(d.h_rpb,   9));
+  setText('h_dr',   fmt(d.delta_r, 9));
+  setText('h_pwr',  fmt(d.Power_kW, 6));
+  setText('h_cost', fmt(d.Ctotal / 1000, 4));
+
+  // ── Convergence ───────────────────────────────────────────────────────────
+  const cb = document.getElementById('conv_badge');
+  if (d.converged && d.conv_error < 0.001) {
+    cb.className = 'conv-badge ok';  cb.textContent = '✔ Converged';
+  } else {
+    cb.className = 'conv-badge bad'; cb.textContent = '✖ Not Converged — try a different ro guess';
+  }
+  setText('conv_err', fmtSci(d.conv_error));
+  setText('conv_it',  d.conv_iters);
+
+  // ── Alerts ────────────────────────────────────────────────────────────────
+  let al = '';
+  if (inp_vals.gl_ratio < 0.8) al += `<div class="alert alert-warn">G/L = ${inp_vals.gl_ratio} &lt; 0.8 — not enough gas, poor mass transfer.</div>`;
+  if (inp_vals.gl_ratio > 1.6) al += `<div class="alert alert-warn">G/L = ${inp_vals.gl_ratio} &gt; 1.6 — flooding / high pressure drop risk.</div>`;
+  if (d.Ug_op > d.Ug_flood)    al += `<div class="alert alert-err">⚠ Operating Ug exceeds flood velocity!</div>`;
+  if (!al) al = `<div class="alert alert-ok">✔ All operating conditions within acceptable range.</div>`;
+  document.getElementById('alerts').innerHTML = al;
+
+  // ── Step 1 — Basis & physical props ──────────────────────────────────────
+  setText('r_L',    fmtSci(d.L));
+  setText('r_G',    fmtSci(d.G_NTP));
+  setText('r_N2',   fmt(d.G_hr,   6));
+  setText('r_P',    fmt(d.P_bar,  9));
+  setText('r_rhoG', fmt(d.rhoG,   9));
+  setText('r_muL',  fmt(d.muL,    9));
+  setText('r_muG',  fmt(d.muG * 1e5, 9));
+  setText('r_DL',   fmt(d.DL * 1e9,  9));
+  setText('r_DG',   fmt(d.DG * 1e6,  9));
+
+  // ── Step 2 — ri & distributor ─────────────────────────────────────────────
+  setText('r_dp',      fmt(d.dp,       9));
+  setText('r_omega',   fmt(d.omega,    9));
+  setText('r_ro_guess',fmt(d.ro_guess,  9));
+  setText('r_error',   fmt(d.error,     9));
+  setText('r_Ac',      fmt(d.Ac,       9));
+  setText('r_V_actual',fmt(d.V_actual, 9));
+  setText('r_A_ori',   fmtSci(d['A_ori '] ?? d.A_ori));   // handle possible trailing-space key
+  setText('r_Ng',      fmt(d.Ng,       9));
+  setText('r_ri',      fmt(d.ri,       9));
+  setText('r_D',       fmt(d.D,        9));
+  setText('r_Re',      fmt(d.Re_pipe,  4));
+  setText('r_f',       fmt(d.f_fric,   9));
+  setText('r_n',       fmt(d.n_holes,  6));
+  setText('r_Dri',     fmt(d.Dri,      9));
+  setText('r_conv',    fmt(d.conv,    9));
+
+  // ── Step 3 — flooding ─────────────────────────────────────────────────────
+  setText('r_Ugf',   fmt(d.Ug_flood, 9));
+  setText('r_Ugo',   fmt(d.Ug_op,   9));
+
+  // ── Step 4 — h ────────────────────────────────────────────────────────────
+  setText('r_h',     fmt(d.h_rpb,   9));
+
+  // ── Steps 5-6 — dimensionless ─────────────────────────────────────────────
+  setText('r_ReL',   fmt(d.ReL, 6));
+  setText('r_ReG',   fmt(d.ReG, 6));
+  setText('r_GrL',   fmtSci(d.GrL));
+  setText('r_GrG',   fmtSci(d.GrG));
+  setText('r_ScL',   fmt(d.ScL, 6));
+  setText('r_ScG',   fmt(d.ScG, 6));
+
+  // ── Mass transfer ─────────────────────────────────────────────────────────
+  setText('r_He',    fmt(d.He,  9));
+  setText('r_kLa',   fmt(d.kLa, 9));
+  setText('r_kGa',   fmt(d.kGa, 9));
+  setText('r_KGa',   fmt(d.KGa, 9));
+  setText('r_NTU',   fmt(d.NTU, 9));
+  setText('r_ATU',   fmt(d.ATU, 9));
+  setText('r_RTD',   fmt(d.RTD, 9));
+
+  // ── Pressure drop ─────────────────────────────────────────────────────────
+  setText('r_dPd',   fmt(d.dP_discharge, 6));
+  setText('r_dPt',   fmt(d.dP_total,     9));
+  setText('r_dPc',   fmt(d.dPc,          9));
+  setText('r_dPp',   fmt(d.dPpack,       9));
+  setText('r_dPf',   fmt(d.dPf,          9));
+  setText('r_dPm',   fmt(d.dPm,          9));
+  setText('r_gas_fa',fmt(d.gas_fa,       9));
+  setText('r_K_hl',  fmt(d.K_hl,         2));
+  setText('r_CD',    fmt(d.CD,           2));
+
+  // ── Performance ───────────────────────────────────────────────────────────
+  setText('r_pwr',   fmt(d.Power_kW, 9));
+  setText('r_mald',  fmt(d.Maldist,  9));
+  setText('r_Vpb',   fmt(d.Vpb,      9));
+  setText('r_SR',    fmt(d.SR,       9));
+
+  // ── Costing ───────────────────────────────────────────────────────────────
+  setText('r_Cr',    fmt(d.Crotor,  4));
+  setText('r_Cp',    fmt(d.Cpack,   4));
+  setText('r_Cm',    fmt(d.Cmotor,  4));
+  setText('r_Ct',    fmt(d.Ctotal,  4));
+
+  // Show output panel
+  const panel = document.getElementById('output-panel');
+  panel.classList.add('visible');
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+// Init
+updateGL();
+</script>
+</body>
+</html>
