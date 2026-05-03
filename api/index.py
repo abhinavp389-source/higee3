@@ -19,12 +19,11 @@ BUGS FIXED vs the broken version:
   13. He   : uses T_C+273.15 in denominator (not T_K=T_C+273)
 """
  
+import os
 from flask import Flask, render_template, request, jsonify
-import math
-import traceback
- 
-app = Flask(__name__)
- 
+import math, traceback
+
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'templates'))
  
 def calculate_higee(params):
  
